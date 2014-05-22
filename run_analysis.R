@@ -34,9 +34,9 @@ theMeans <- sapply(X=features["V2"], FUN=grep,
 theStds <- sapply(X=features["V2"], FUN=grep,
                   pattern="std", value=FALSE)
 desiredDescriptors <- c(theMeans, theStds)
-featuresSelect <- features[desiredDescriptors, "V2"]
+#featuresSelect <- features[desiredDescriptors, "V2"]
 #select the columns of interest from the x data set
-x_combinedSelected <- x_combined[,featuresSelect]
+x_combinedSelected <- x_combined[,desiredDescriptors]
 
 #Apply labels to activities in y_combined
 y_combinedNamed <- merge(y_combined, activity_labels,
@@ -49,7 +49,16 @@ names(y_combinedNamed) <- "activity"
 subject_train <- read.table("data/train/subject_train.txt")
 subject_test <- read.table("data/test/subject_test.txt")
 subject_combine <- rbind(subject_train, subject_test)
+names(subject_combine) <- "subject"
+#combine subjects, y labels and x data combined that we made into one data frame
+superData <- cbind(subject_combine, y_combinedNamed, x_combinedSelected)
+#melt the data set for reforming means by acitvity and subject
+superDataMelt <- melt(superData, id=c(names(superData[1:2])), 
+                      measure.vars=c(names(superData[3:81])))
+#take all unique values for subject and activity then take mean for each
+#feature per subject + activity pair.  If a subject+activity did not have
+#an activity for the subject, it is not included.
+superDataDcast <- dcast(superDataMelt, subject + activity ~ variable, mean)
 
-#combine subjects, y labels and x data into one data frame
-superData <- cbind(subject_combine, y_combinedNamed, x_combined)
-#sapply(split(superData[3:563], c(), mean)
+#write superDataDcast to csv as a our tidy data file
+write.table(superDataDcast, "tidyfile.txt", row.names=FALSE)
